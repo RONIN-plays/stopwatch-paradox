@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paradox</title>
+<style>
+  :root {
+    --bg: #050505;
+    --panel: #0e0e0e;
+    --line: #2a0a0a;
+    --red: #ff1a1a;
+    --red-dim: #8f0f0f;
+    --text: #f2f2f2;
+    --muted: #8a8a8a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: radial-gradient(circle at 50% 0%, #1c0505 0%, var(--bg) 60%);
+    color: var(--text); font-family: "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; padding: 24px 16px;
+  }
+  h1 { margin: 0 0 4px; letter-spacing: .35em; font-size: 1.1rem; color: var(--red); text-transform: uppercase; text-shadow: 0 0 12px var(--red); }
+  .sub { color: var(--muted); font-size: .75rem; letter-spacing: .2em; margin-bottom: 20px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab { background: none; border: 1px solid var(--line); color: var(--muted); padding: 10px 28px; cursor: pointer; letter-spacing: .15em; text-transform: uppercase; font-size: .8rem; border-radius: 4px; }
+  .tab.active { color: #fff; background: var(--red-dim); border-color: var(--red); box-shadow: 0 0 14px rgba(255,26,26,.4); }
+  .card { width: 100%; max-width: 480px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 28px 20px; box-shadow: 0 0 40px rgba(255,26,26,.08); }
+  .display { font-family: Consolas, "Courier New", monospace; font-size: clamp(2.4rem, 11vw, 4rem); text-align: center; color: var(--red); text-shadow: 0 0 18px rgba(255,26,26,.6); font-variant-numeric: tabular-nums; margin: 8px 0 24px; }
+  .display small { font-size: .5em; opacity: .7; }
+  .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  button.b { background: #000; color: var(--text); border: 1px solid var(--red-dim); padding: 12px 26px; border-radius: 6px; cursor: pointer; font-size: .9rem; letter-spacing: .1em; text-transform: uppercase; transition: .15s; }
+  button.b:hover { border-color: var(--red); box-shadow: 0 0 12px rgba(255,26,26,.5); }
+  button.b.primary { background: var(--red); color: #000; font-weight: 700; border-color: var(--red); }
+  button.b:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
+  .laps { margin-top: 20px; max-height: 220px; overflow-y: auto; font-family: Consolas, monospace; font-size: .9rem; }
+  .lap { display: flex; justify-content: space-between; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+  .lap span:first-child { color: var(--muted); }
+  .lap.best { color: #6dff8a; } .lap.worst { color: var(--red); }
+  .inputs { display: flex; justify-content: center; gap: 10px; margin-bottom: 14px; align-items: center; }
+  .inputs label { display: flex; flex-direction: column; align-items: center; font-size: .65rem; color: var(--muted); letter-spacing: .2em; text-transform: uppercase; gap: 4px; }
+  .inputs input { width: 80px; background: #000; border: 1px solid var(--red-dim); color: var(--red); font-size: 1.6rem; text-align: center; padding: 8px 0; border-radius: 6px; font-family: Consolas, monospace; }
+  .inputs input:focus { outline: none; border-color: var(--red); box-shadow: 0 0 10px rgba(255,26,26,.5); }
+  .presets { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+  .presets button { background: none; border: 1px solid var(--line); color: var(--muted); padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: .75rem; }
+  .presets button:hover { color: var(--red); border-color: var(--red); }
+  .bar { height: 6px; background: #1a1a1a; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+  .bar > div { height: 100%; width: 100%; background: var(--red); box-shadow: 0 0 10px var(--red); transition: width .1s linear; }
+  .done .display { animation: flash .6s infinite alternate; }
+  @keyframes flash { from { opacity: 1; } to { opacity: .2; } }
+  .hint { margin-top: 18px; color: var(--muted); font-size: .7rem; text-align: center; letter-spacing: .1em; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <h1>Paradox</h1>
+  <div class="sub">STOPWATCH // TIMER</div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="sw">Stopwatch</button>
+    <button class="tab" data-tab="tm">Timer</button>
+  </div>
+
+  <!-- Stopwatch -->
+  <div class="card" id="sw">
+    <div class="display" id="swDisplay">00:00:00<small>.00</small></div>
+    <div class="btns">
+      <button class="b primary" id="swStart">Start</button>
+      <button class="b" id="swLap" disabled>Lap</button>
+      <button class="b" id="swReset" disabled>Reset</button>
+    </div>
+    <div class="laps" id="laps"></div>
+    <div class="hint">SPACE start/stop · L lap · R reset</div>
+  </div>
+
+  <!-- Timer -->
+  <div class="card" id="tm" hidden>
+    <div class="display" id="tmDisplay">00:05:00<small>.0</small></div>
+    <div class="bar"><div id="tmBar"></div></div>
+    <div class="inputs" id="tmInputs">
+      <label>Hours<input id="tmH" type="number" min="0" max="99" value="0"></label>
+      <label>Min<input id="tmM" type="number" min="0" max="59" value="5"></label>
+      <label>Sec<input id="tmS" type="number" min="0" max="59" value="0"></label>
+    </div>
+    <div class="presets">
+      <button data-s="60">1 min</button><button data-s="300">5 min</button>
+      <button data-s="600">10 min</button><button data-s="1500">25 min</button><button data-s="3600">1 hr</button>
+    </div>
+    <div class="btns">
+      <button class="b primary" id="tmStart">Start</button>
+      <button class="b" id="tmReset">Reset</button>
+    </div>
+    <div class="hint">SPACE start/pause · R reset</div>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+const pad = (n, l = 2) => String(n).padStart(l, "0");
+let activeTab = "sw";
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  activeTab = t.dataset.tab;
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x === t));
+  $("sw").hidden = activeTab !== "sw";
+  $("tm").hidden = activeTab !== "tm";
+});
+
+/* ---------- Stopwatch ---------- */
+const sw = { running: false, start: 0, elapsed: 0, raf: 0, laps: [], lastLap: 0 };
+function fmtSW(ms) {
+  const cs = Math.floor(ms / 10) % 100, s = Math.floor(ms / 1000) % 60,
+        m = Math.floor(ms / 60000) % 60, h = Math.floor(ms / 3600000);
+  return `${pad(h)}:${pad(m)}:${pad(s)}<small>.${pad(cs)}</small>`;
+}
+function fmtPlain(ms) { return fmtSW(ms).replace(/<\/?small>/g, ""); }
+function swNow() { return sw.running ? sw.elapsed + performance.now() - sw.start : sw.elapsed; }
+function swTick() { $("swDisplay").innerHTML = fmtSW(swNow()); sw.raf = requestAnimationFrame(swTick); }
+function swToggle() {
+  if (sw.running) {
+    sw.elapsed = swNow(); sw.running = false; cancelAnimationFrame(sw.raf);
+    $("swDisplay").innerHTML = fmtSW(sw.elapsed);
+    $("swStart").textContent = "Resume"; $("swLap").disabled = true;
+  } else {
+    sw.start = performance.now(); sw.running = true; swTick();
+    $("swStart").textContent = "Stop"; $("swLap").disabled = false; $("swReset").disabled = false;
+  }
+}
+function swLap() {
+  if (!sw.running) return;
+  const t = swNow(); sw.laps.push({ split: t - sw.lastLap, total: t }); sw.lastLap = t; renderLaps();
+}
+function renderLaps() {
+  const splits = sw.laps.map(l => l.split);
+  const best = Math.min(...splits), worst = Math.max(...splits);
+  $("laps").innerHTML = sw.laps.map((l, i) =>
+    `<div class="lap ${sw.laps.length > 1 && l.split === best ? "best" : sw.laps.length > 1 && l.split === worst ? "worst" : ""}">
+      <span>Lap ${i + 1}</span><span>${fmtPlain(l.split)}</span><span>${fmtPlain(l.total)}</span></div>`
+  ).reverse().join("");
+}
+function swReset() {
+  cancelAnimationFrame(sw.raf);
+  Object.assign(sw, { running: false, elapsed: 0, laps: [], lastLap: 0 });
+  $("swDisplay").innerHTML = fmtSW(0); $("laps").innerHTML = "";
+  $("swStart").textContent = "Start"; $("swLap").disabled = true; $("swReset").disabled = true;
+}
+$("swStart").onclick = swToggle; $("swLap").onclick = swLap; $("swReset").onclick = swReset;
+
+/* ---------- Timer ---------- */
+const tm = { running: false, total: 300000, remaining: 300000, end: 0, raf: 0 };
+function fmtTM(ms) {
+  const t = Math.ceil(ms / 100) / 10;
+  const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = Math.floor(t) % 60, d = Math.round((t % 1) * 10);
+  return `${pad(h)}:${pad(m)}:${pad(s)}<small>.${d}</small>`;
+}
+function readInputs() {
+  const v = id => Math.max(0, parseInt($(id).value) || 0);
+  return (v("tmH") * 3600 + v("tmM") * 60 + v("tmS")) * 1000;
+}
+function setInputs(sec) {
+  $("tmH").value = Math.floor(sec / 3600); $("tmM").value = Math.floor(sec / 60) % 60; $("tmS").value = sec % 60;
+  syncFromInputs();
+}
+function syncFromInputs() {
+  if (tm.running) return;
+  tm.total = tm.remaining = readInputs();
+  $("tmDisplay").innerHTML = fmtTM(tm.remaining); $("tmBar").style.width = "100%";
+  $("tm").classList.remove("done");
+}
+["tmH", "tmM", "tmS"].forEach(id => $(id).addEventListener("input", syncFromInputs));
+document.querySelectorAll(".presets button").forEach(b => b.onclick = () => { tmReset(); setInputs(+b.dataset.s); });
+
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.3, 0.6].forEach(d => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "square"; o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.15, ctx.currentTime + d); g.gain.setValueAtTime(0, ctx.currentTime + d + 0.2);
+      o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.25);
+    });
+  } catch (e) {}
+}
+function tmTick() {
+  tm.remaining = Math.max(0, tm.end - performance.now());
+  $("tmDisplay").innerHTML = fmtTM(tm.remaining);
+  $("tmBar").style.width = (tm.total ? tm.remaining / tm.total * 100 : 0) + "%";
+  document.title = fmtPlain(tm.remaining) + " · Paradox";
+  if (tm.remaining <= 0) {
+    tm.running = false; $("tmStart").textContent = "Start";
+    $("tm").classList.add("done"); beep(); document.title = "Time's up! · Paradox"; return;
+  }
+  tm.raf = requestAnimationFrame(tmTick);
+}
+function tmToggle() {
+  if (tm.running) {
+    cancelAnimationFrame(tm.raf); tm.running = false; $("tmStart").textContent = "Resume";
+  } else {
+    if (!tm.running && tm.remaining <= 0) syncFromInputs();
+    if (tm.remaining <= 0) return;
+    tm.end = performance.now() + tm.remaining; tm.running = true;
+    $("tm").classList.remove("done"); $("tmStart").textContent = "Pause"; tmTick();
+  }
+}
+function tmReset() {
+  cancelAnimationFrame(tm.raf); tm.running = false; $("tmStart").textContent = "Start";
+  document.title = "Paradox"; syncFromInputs();
+}
+$("tmStart").onclick = tmToggle; $("tmReset").onclick = tmReset;
+syncFromInputs();
+
+/* ---------- Keyboard ---------- */
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  const k = e.key.toLowerCase();
+  if (k === " ") { e.preventDefault(); activeTab === "sw" ? swToggle() : tmToggle(); }
+  else if (k === "r") activeTab === "sw" ? swReset() : tmReset();
+  else if (k === "l" && activeTab === "sw") swLap();
+});
+</script>
+</body>
+</html>
